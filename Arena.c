@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include "types.h"
 #include "arena.h"
+#include <assert.h>
 
-static const i64 INITIAL_SIZE = 60; // 300 bytes
-
+static const i64 INITIAL_SIZE = 72; // 300 bytes
+static const i8 ALIGNMENT_BYTES = 16;
 
 void ArenaDebugPrint(Arena* arena) {
     printf("-------------------\n\n");
@@ -52,10 +53,16 @@ void ReleaseArena(Arena * a)
 }// end of ReleaseArena (~destructor)
 
 
-void* ArenaPush(Arena* arena, i64 size)
+void* ArenaPush(Arena* arena, i64 s)
 {
+  i64 size = s;
+  if (size % ALIGNMENT_BYTES != 0){
+    size = (size) + (ALIGNMENT_BYTES - (size % ALIGNMENT_BYTES) );
+  }
+
   i64 req_plus_used = size + arena->used_capacity; 
   if (req_plus_used > arena->max_capacity){
+    printf("req_plus_used : %lld", req_plus_used);
     perror("trying to request more than available");
     return NULL;
   }
@@ -67,11 +74,16 @@ void* ArenaPush(Arena* arena, i64 size)
 }// end of ArenaPush
 
 
-void* ArenaPushZeroes(Arena* arena, i64 size)
+void* ArenaPushZeroes(Arena* arena, i64 s)
 {
+  i64 size = s;
+  if (size % ALIGNMENT_BYTES != 0){
+    size = (size) + (ALIGNMENT_BYTES - (size % ALIGNMENT_BYTES) );
+  }
 
   i64 req_plus_used = size + arena->used_capacity; 
   if (req_plus_used > arena->max_capacity){
+    printf("req_plus_used : %lld", req_plus_used);
     perror("trying to request more than available");
     return NULL;
   }
@@ -95,11 +107,15 @@ void ArenaPop(Arena* arena, i64 size)
   
   i64 delete_size = size;
   b8 remove_too_much = 0;
+  i64 stop_index = 0;  
   if (used_minus_size < 0){
     remove_too_much = 1;  
     delete_size = arena->used_capacity;
+    stop_index = 0;
+  }else{
+    stop_index = arena->ptr - delete_size; // should be non-zero 
+    assert(stop_index != 0);
   }
-  i64 stop_index = arena->ptr - delete_size;
 
   for (i64 i = arena->ptr - 1; i >= stop_index; i--){
       arena->buffer[i] = '\0';
@@ -130,6 +146,8 @@ typedef struct{
 
 int main(void)
 {
+
+  /*
   Arena * my_arena  = ArenaAlloc();
   ArenaDebugPrint(my_arena);
   char* name = (char* ) ArenaPush(my_arena, 20);
@@ -164,18 +182,36 @@ int main(void)
   ArenaDebugPrint(my_arena);
 
   ArenaPushZeroes(my_arena, 22);
+void* p = ArenaPush(my_arena, 8);
+printf("Address: %p\n", p);
+  
 
   ArenaDebugPrint(my_arena);
   
   ReleaseArena(my_arena);
-  Arena* a = ArenaAlloc();
 
+  */
+  Arena* a = ArenaAlloc();
+  printf("pusing\n");
   char* e = ArenaPush(a, 60);
   memset(e, 'e', 60);
-  ArenaDebugPrint(a);
+ // ArenaDebugPrint(a);
+  printf("popping\n");
   ArenaPop(a, 60);
-  ArenaDebugPrint(a);
+//  ArenaDebugPrint(a);
+ 
+  printf("popping everything \n");
+  ArenaPop(a, 500);
+  //ArenaDebugPrint(a);
 
+
+    char* h = ArenaPush(a, 5);
+    strcpy(h, "help!");
+  ArenaDebugPrint(a);
+    ArenaPop(a, 5);
+  ArenaDebugPrint(a);
+  ArenaPop(a, 500);
+  ArenaDebugPrint(a);
   ReleaseArena(a);
   
 }
