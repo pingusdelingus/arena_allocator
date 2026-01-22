@@ -3,7 +3,8 @@
 #include "arena.h"
 #include <assert.h>
 
-static const i64 INITIAL_SIZE = 72; // 300 bytes
+static const i64 INITIAL_SIZE = 300; // 300 bytes
+
 static const i8 ALIGNMENT_BYTES = 16;
 
 void ArenaDebugPrint(Arena* arena) {
@@ -33,8 +34,15 @@ void ArenaDebugPrint(Arena* arena) {
 Arena* ArenaAlloc(void)
 {
   Arena* arena = (Arena*) malloc(sizeof(Arena));  
+  if (arena == NULL){
+    return NULL;
+  }
   
   arena->buffer = (char*) malloc(INITIAL_SIZE);
+  if (arena->buffer == NULL){
+    return NULL;
+  }
+
   arena->max_capacity = INITIAL_SIZE; // i32 to i64 conversion ? 
   arena->used_capacity = 0;
   arena->ptr = 0; // point at first index !
@@ -42,10 +50,26 @@ Arena* ArenaAlloc(void)
   return arena; // will not get deleted after scope ends
 }// end of ArenaAlloc (constructor)
 
+Arena*  ArenaRealloc(Arena* a)
+{
+  i64 size = a->max_capacity;
+  
+  char* new_buff = (char* )realloc (a->buffer, 2 * size);
+  if (new_buff == NULL){
+    return NULL;
+  }
+  a-> max_capacity *= 2;
+  
+  a->buffer = new_buff;
+
+  return a;
+
+}// end of ArenaRealloc
+
 
 void ReleaseArena(Arena * a)
 {
-  // free buff
+  // free char* buff
   free(a->buffer);
 
   // free arena itself
@@ -62,9 +86,7 @@ void* ArenaPush(Arena* arena, i64 s)
 
   i64 req_plus_used = size + arena->used_capacity; 
   if (req_plus_used > arena->max_capacity){
-    printf("req_plus_used : %lld", req_plus_used);
-    perror("trying to request more than available");
-    return NULL;
+    a = ArenaRealloc(arena);
   }
 
   char* current_ptr = &(arena->buffer[arena->ptr]); // return this in a bit
@@ -83,8 +105,7 @@ void* ArenaPushZeroes(Arena* arena, i64 s)
 
   i64 req_plus_used = size + arena->used_capacity; 
   if (req_plus_used > arena->max_capacity){
-    printf("req_plus_used : %lld", req_plus_used);
-    perror("trying to request more than available");
+    perror("trying to request more bytes than available");
     return NULL;
   }
 
@@ -92,11 +113,13 @@ void* ArenaPushZeroes(Arena* arena, i64 s)
 
   char* current_ptr = &(arena->buffer[arena->ptr]);
 
-  for (i64 i = start_num; i  < arena->ptr; i++){
+  for (i64 i = start_num; i  < arena->ptr + size; i++){
     arena->buffer[i] = '\0';
   }// end of for
+
   arena->ptr += size;
   arena->used_capacity += size;
+
   return current_ptr;
 }// end of ArenaPushZeroes
 
@@ -146,69 +169,21 @@ typedef struct{
 
 int main(void)
 {
-
-  /*
-  Arena * my_arena  = ArenaAlloc();
-  ArenaDebugPrint(my_arena);
-  char* name = (char* ) ArenaPush(my_arena, 20);
-  printf("allocating 20 bytes for my name\n");
-  printf("bytes used:  %lld\n", GetArenaSize(my_arena));
-
-  strcpy(name, "esteban!");
-  ArenaDebugPrint(my_arena);
-
-  Vec2* vector = ArenaPush(my_arena, (i64) (sizeof(Vec2) ));
-  printf("allocating my vector\n");
-  printf("bytes used:  %lld\n", GetArenaSize(my_arena));
-
-  printf("popping off 1 vec2 \n");
-  ArenaPop(my_arena, (i64) (sizeof(Vec2)));   
-  printf("bytes used:  %lld\n", GetArenaSize(my_arena));
-
-  vector = ArenaPush(my_arena, (i64) (sizeof(Vec2) ));
-  printf("allocating my vector again\n");
-  printf("bytes used:  %lld\n", GetArenaSize(my_arena));
-  
-  printf("popping off 20 bytes\n");
-  ArenaPop(my_arena, 20);
-
-  printf("bytes used:  %lld\n", GetArenaSize(my_arena));
-  
-  printf("popping off 20 bytes\n");
-  ArenaPop(my_arena, 20);
-
-  printf("bytes used:  %lld\n", GetArenaSize(my_arena));
-
-  ArenaDebugPrint(my_arena);
-
-  ArenaPushZeroes(my_arena, 22);
-void* p = ArenaPush(my_arena, 8);
-printf("Address: %p\n", p);
-  
-
-  ArenaDebugPrint(my_arena);
-  
-  ReleaseArena(my_arena);
-
-  */
   Arena* a = ArenaAlloc();
   printf("pusing\n");
   char* e = ArenaPush(a, 60);
+
   memset(e, 'e', 60);
- // ArenaDebugPrint(a);
   printf("popping\n");
   ArenaPop(a, 60);
-//  ArenaDebugPrint(a);
  
   printf("popping everything \n");
   ArenaPop(a, 500);
-  //ArenaDebugPrint(a);
 
-
-    char* h = ArenaPush(a, 5);
-    strcpy(h, "help!");
+  char* h = ArenaPush(a, 5);
+  strcpy(h, "help!");
   ArenaDebugPrint(a);
-    ArenaPop(a, 5);
+  ArenaPop(a, 5);
   ArenaDebugPrint(a);
   ArenaPop(a, 500);
   ArenaDebugPrint(a);

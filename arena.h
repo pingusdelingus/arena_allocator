@@ -15,6 +15,8 @@ Arena* ArenaAlloc(void );
 // ~destructor
 void ReleaseArena(Arena * a); 
 
+// realloc (double size if full)
+void ArenaRellaoc(Arena * a);
 //push bytes
 void* ArenaPush(Arena* arena, i64 size);
 
