@@ -185,7 +185,6 @@ Arena* ArenaConstruct(void)
 
 void ArenaDestruct(Arena* a)
 {
-  ArenaBlock * start = a->genesis;
   ReleaseArenaBlocks(a->genesis);
   free(a);
 
@@ -311,8 +310,8 @@ void test_cross_block_pop() {
     i32 total_size = GetArenaSize(a);
     // Pop more than the second block contains
     ArenaPop(a, 600); 
-    
-    assert(GetArenaSize(a) < 900); // Should have regressed into the first block
+    total_size = GetArenaSize(a); 
+    assert(total_size < 900); // Should have regressed into the first block
     ArenaDestruct(a);
     printf("PASSED\n");
 }

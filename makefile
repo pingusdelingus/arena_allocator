@@ -1,38 +1,35 @@
 CC = gcc
+CFLAGS = -Wall -Wextra -MMD -MP -Isrc
 
-CFLAGS = -Wall -Wextra -MMD -MP
+BUILD_DIR = bin
+OBJ_DIR = obj
+SRC_DIR = src
 
-BUILD_DIR=bin
-OBJ_DIR= obj
-SOURCES = arena.c
-OBJECTS = $(patsubst %.c,$(OBJDIR)/%.o,$(SOURCES))
+SOURCES = $(SRC_DIR)/Arena.c
+
+OBJECTS = $(SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 DEPS = $(OBJECTS:.o=.d)
-VPATH = src
 
-TARGET = arena
+TARGET = arena.exe
 
 .PHONY: clean all run
 
 all: $(BUILD_DIR)/$(TARGET)
 
-
 $(BUILD_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
-
+# Linking the final executable
 $(BUILD_DIR)/$(TARGET): $(OBJECTS) | $(BUILD_DIR)
-	$(CC) $^ -o $@
+	$(CC) $(OBJECTS) -o $@
 
-
-$(OBJ_DIR)/%.o: %.c | $(OBJ_DIR)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 -include $(DEPS)
-
 
 clean:
 	rm -rf $(OBJ_DIR) $(BUILD_DIR)
 
 run: $(BUILD_DIR)/$(TARGET)
 	./$(BUILD_DIR)/$(TARGET)
-	
