@@ -54,6 +54,24 @@ void ReleaseArenaBlocks(ArenaBlock * a)
 
 }// end of ReleaseArenaBlock (~destructor)
 
+int FreeArenaBlock(ArenaBlock * arenablock)
+{
+  int error_count = 2;
+  if (arenablock != NULL && arenablock->buffer){
+    free(arenablock->buffer);
+    error_count--;
+    arenablock->buffer = NULL;
+  }
+
+  if (arenablock != NULL){
+    free(arenablock);
+    error_count--;
+    arenablock= NULL;
+  }
+
+return error_count;
+}// end of free arenablock
+
 
 void* ArenaBlockPush(ArenaBlock* arena, i32 s )
 {
@@ -118,7 +136,7 @@ void ArenaBlockPop(ArenaBlock* arena, i32 size)
 }// end of ArenaBlockPop
 
 
-i32 GetArenaBlockSize(ArenaBlock* arena)
+inline i32 GetArenaBlockSize(ArenaBlock* arena)
 {
   return arena->ptr;
 }// end of GetArenaBlockSize
@@ -129,7 +147,7 @@ typedef struct{
   i32 y;
 } Vec2;
 
-void ArenaBlockDebugPrint(ArenaBlock* arena) {
+inline void ArenaBlockDebugPrint(ArenaBlock* arena) {
     printf("-------------------\n\n");
     printf("\nARENA DEBUG \n");
     printf("Pointer: %d| Max: %d\n", 
@@ -167,6 +185,7 @@ Arena* ArenaConstruct(void)
 
 void ArenaDestruct(Arena* a)
 {
+  ArenaBlock * start = a->genesis;
   ReleaseArenaBlocks(a->genesis);
   free(a);
 
@@ -214,7 +233,6 @@ void* ArenaPushZeroes(Arena* a, i32 s)
     size = (size) + (ALIGNMENT_BYTES - (size % ALIGNMENT_BYTES) );
   }
   
-  b8 dontsizecheck = 0;
 
   ArenaBlock* curr = a->current;
   i32 req_plus_used = size + curr->ptr; 
@@ -243,15 +261,13 @@ void* ArenaPushZeroes(Arena* a, i32 s)
 void ArenaPop(Arena* a, i32 size)
 {
   i32 ammount_to_remove = size;
- ArenaBlock* current = a->current;
- i32 delete_size = 0; 
+  ArenaBlock* current = a->current;
+  i32 delete_size = 0; 
   while (ammount_to_remove > 0 && current != NULL) {
       if (ammount_to_remove - current->ptr < 0){
       delete_size = current->ptr;
       } else{
       delete_size = ammount_to_remove;
-     ArenaBlockPop(current, delete_size);
-      return;
     } 
 
     ArenaBlockPop(current, delete_size);
