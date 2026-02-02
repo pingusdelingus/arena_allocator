@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -MMD -MP -Isrc
+CFLAGS = -Wall -Wextra -MMD -MP -Isrc -O3
 
 BUILD_DIR = bin
 OBJ_DIR = obj

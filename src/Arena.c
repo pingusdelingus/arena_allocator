@@ -10,12 +10,12 @@ static const i8 ALIGNMENT_BYTES = 16;
 
 static const b8 USE_MMAP = 1;
 
+// ------------------------------------------------------------------------------
 
 ArenaBlock* AllocArenaBlock(void)
 {
   if (USE_MMAP){
-    ArenaBlock* arena;
-  arena = (ArenaBlock* ) mmap(NULL, sizeof(ArenaBlock), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS ,-1,0 ); 
+    ArenaBlock* arena = (ArenaBlock* ) mmap(NULL, sizeof(ArenaBlock), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS ,-1,0 ); 
 
   if (arena == MAP_FAILED){
       perror("mmap failed on arena");
@@ -68,7 +68,7 @@ ArenaBlock* AllocArenaBlock(void)
   }// end of else
 }// end of AllocArenaBlock (constructor)
 
-
+// ------------------------------------------------------------------------------
 
 void ReleaseArenaBlocks(ArenaBlock * a)
 {
@@ -80,7 +80,7 @@ void ReleaseArenaBlocks(ArenaBlock * a)
   while (curr != NULL){
       struct ArenaBlock* next = curr->next;
       
-      munmap(curr->buffer, sizeof(curr->buffer));
+      munmap(curr->buffer, sizeof(INITIAL_BLOCK_SIZE));
       munmap(curr, sizeof(curr));
       // iterate   
      curr = next;
@@ -106,6 +106,8 @@ void ReleaseArenaBlocks(ArenaBlock * a)
 
 }// end of ReleaseArenaBlock (~destructor)
 
+// ------------------------------------------------------------------------------
+
 int FreeArenaBlock(ArenaBlock * arenablock)
 {
   int error_count = 2;
@@ -124,6 +126,7 @@ int FreeArenaBlock(ArenaBlock * arenablock)
 return error_count;
 }// end of free arenablock
 
+// ------------------------------------------------------------------------------
 
 void* ArenaBlockPush(ArenaBlock* arena, i32 s )
 {
@@ -135,6 +138,7 @@ void* ArenaBlockPush(ArenaBlock* arena, i32 s )
   return current_ptr; 
 }// end of ArenaBlockPush
 
+// ------------------------------------------------------------------------------
 
 void* ArenaBlockPushZeroes(ArenaBlock* arena, i32 s )
 {
@@ -152,6 +156,7 @@ void* ArenaBlockPushZeroes(ArenaBlock* arena, i32 s )
   return current_ptr;
 }// end of ArenaBlockPushZeroes
 
+// ------------------------------------------------------------------------------
 
 void ArenaBlockPop(ArenaBlock* arena, i32 size)
 {
@@ -187,17 +192,21 @@ void ArenaBlockPop(ArenaBlock* arena, i32 size)
   }
 }// end of ArenaBlockPop
 
+// ------------------------------------------------------------------------------
 
 inline i32 GetArenaBlockSize(ArenaBlock* arena)
 {
   return arena->ptr;
 }// end of GetArenaBlockSize
 
+// ------------------------------------------------------------------------------
 
 typedef struct{
   i32 x;
   i32 y;
 } Vec2;
+
+// ------------------------------------------------------------------------------
 
 inline void ArenaBlockDebugPrint(ArenaBlock* arena) {
     printf("-------------------\n\n");
@@ -222,8 +231,7 @@ inline void ArenaBlockDebugPrint(ArenaBlock* arena) {
     printf("-------------------\n\n");
 }// end of ArenaBlockDebugPrint
 
-
-
+// ------------------------------------------------------------------------------
 
 Arena* ArenaConstruct(void)
 {
@@ -251,6 +259,7 @@ Arena* ArenaConstruct(void)
   }// end of else
 }
 
+// ------------------------------------------------------------------------------
 
 void ArenaDestruct(Arena* a)
 {
@@ -269,6 +278,7 @@ void ArenaDestruct(Arena* a)
   }// end of eflse
 }
 
+// ------------------------------------------------------------------------------
 
 void* ArenaPush(Arena* a, i32 s)
 {
@@ -302,6 +312,7 @@ void* ArenaPush(Arena* a, i32 s)
   
 }// end of arena push
 
+// ------------------------------------------------------------------------------
 
 void* ArenaPushZeroes(Arena* a, i32 s)
 {
@@ -334,6 +345,7 @@ void* ArenaPushZeroes(Arena* a, i32 s)
   return ArenaBlockPushZeroes(a->current, size ) ;
 }// end of ArenaPushZeroes
 
+// ------------------------------------------------------------------------------
 
 void ArenaPop(Arena* a, i32 size)
 {
@@ -354,8 +366,9 @@ void ArenaPop(Arena* a, i32 size)
     current = current->prev;
   }// end of while
 
-}
+}// end of ArenaPop
 
+// ------------------------------------------------------------------------------
 i32 GetArenaSize(Arena* a)
 {
   i32 size = 0;
@@ -369,12 +382,15 @@ i32 GetArenaSize(Arena* a)
   return size;
 }// GetArenaSize
 
+// ------------------------------------------------------------------------------
 
 typedef struct vector {
   i32 x;
   i32 y;
 } vector;
 
+
+// ------------------------------------------------------------------------------
 
 void test_cross_block_pop() {
     printf("Running: Cross-Block Pop... ");
@@ -394,6 +410,9 @@ void test_cross_block_pop() {
     printf("PASSED\n");
 }
 
+
+// ------------------------------------------------------------------------------
+
 void test_basic_lifecycle() {
     printf("Running: Basic Lifecycle... ");
     Arena *a = ArenaConstruct();
@@ -403,6 +422,8 @@ void test_basic_lifecycle() {
     ArenaDestruct(a);
     printf("PASSED\n");
 }
+
+// ------------------------------------------------------------------------------
 
 void test_block_overflow() {
     printf("Running: Block Overflow... ");
@@ -419,6 +440,7 @@ void test_block_overflow() {
     printf("PASSED\n");
 }
 
+// ------------------------------------------------------------------------------
 
 int main(void)
 {
