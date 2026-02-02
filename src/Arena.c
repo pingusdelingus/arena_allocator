@@ -2,14 +2,47 @@
 #include "types.h"
 #include "arena.h"
 #include <assert.h>
+#include <sys/mman.h>
 
 static const i32 INITIAL_BLOCK_SIZE = 1000; // 1kb 
 
 static const i8 ALIGNMENT_BYTES = 16;
 
+static const b8 USE_MMAP = 1;
+
 
 ArenaBlock* AllocArenaBlock(void)
 {
+  if (USE_MMAP){
+    ArenaBlock* arena;
+  arena = (ArenaBlock* ) mmap(NULL, sizeof(ArenaBlock), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS ,-1,0 ); 
+
+  if (arena == MAP_FAILED){
+      perror("mmap failed on arena");
+      return NULL;
+    }
+
+    arena-> buffer = (char* ) mmap (NULL, INITIAL_BLOCK_SIZE,  PROT_READ | PROT_WRITE,  MAP_PRIVATE | MAP_ANONYMOUS, -1 , 0); 
+    
+    if (arena->buffer == MAP_FAILED){
+      perror("mmap failed on buffer");
+
+      munmap(arena, sizeof(arena));
+      munmap(arena->buffer, INITIAL_BLOCK_SIZE);
+      return NULL;
+    }
+
+
+  arena->isFull = 0;
+  arena->next = NULL;
+  arena->prev = NULL;
+  arena->max_capacity = INITIAL_BLOCK_SIZE; 
+  
+  arena->ptr = 0; // point at first index !
+    return arena;
+
+  }else {
+
   ArenaBlock* arena = (ArenaBlock*) malloc(sizeof(ArenaBlock));  
   if (arena == NULL){
     free(arena);
@@ -32,12 +65,29 @@ ArenaBlock* AllocArenaBlock(void)
   memset(arena->buffer, 0, arena->max_capacity); 
 
   return arena; // will not get deleted after scope ends
+  }// end of else
 }// end of AllocArenaBlock (constructor)
 
 
 
 void ReleaseArenaBlocks(ArenaBlock * a)
 {
+
+  if (USE_MMAP){
+    
+  struct ArenaBlock* curr  = a;
+
+  while (curr != NULL){
+      struct ArenaBlock* next = curr->next;
+      
+      munmap(curr->buffer, sizeof(curr->buffer));
+      munmap(curr, sizeof(curr));
+      // iterate   
+     curr = next;
+  }// end of while
+
+  }else{
+
   struct ArenaBlock* curr  = a;
 
   while (curr != NULL){
@@ -51,6 +101,8 @@ void ReleaseArenaBlocks(ArenaBlock * a)
       // iterate   
      curr = next;
   }// end of while
+
+  }// end of else
 
 }// end of ReleaseArenaBlock (~destructor)
 
@@ -175,20 +227,46 @@ inline void ArenaBlockDebugPrint(ArenaBlock* arena) {
 
 Arena* ArenaConstruct(void)
 {
+  if (USE_MMAP) {
+
+    Arena * a = (Arena* ) mmap(NULL, sizeof(Arena), PROT_READ | PROT_WRITE ,  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+    if (a == MAP_FAILED){
+      perror("mmap failed in arena construct ");
+      return NULL;
+    }
+
+  a->genesis = AllocArenaBlock();
+  a->current = a->genesis;
+  return a;  
+
+  } else{
+
   Arena * a = (Arena*) malloc(sizeof(Arena));
   a->genesis = AllocArenaBlock();
   a->current = a->genesis;
   
   return a;
+
+  }// end of else
 }
 
 
 void ArenaDestruct(Arena* a)
 {
   ReleaseArenaBlocks(a->genesis);
+  if (USE_MMAP){
+    
+    munmap(a, sizeof(a));
+
+  }else{
+
+  
+
   free(a);
 
-  return;
+  return; 
+  }// end of eflse
 }
 
 
