@@ -28,7 +28,7 @@ ArenaBlock* AllocArenaBlock(void)
       perror("mmap failed on buffer");
 
       munmap(arena, sizeof(arena));
-      munmap(arena->buffer, INITIAL_BLOCK_SIZE);
+// not needed      munmap(arena->buffer, INITIAL_BLOCK_SIZE);
       return NULL;
     }
 
@@ -41,7 +41,7 @@ ArenaBlock* AllocArenaBlock(void)
   arena->ptr = 0; // point at first index !
     return arena;
 
-  }else {
+  } else {
 
   ArenaBlock* arena = (ArenaBlock*) malloc(sizeof(ArenaBlock));  
   if (arena == NULL){
@@ -72,7 +72,6 @@ ArenaBlock* AllocArenaBlock(void)
 
 void ReleaseArenaBlocks(ArenaBlock * a)
 {
-
   if (USE_MMAP){
     
   struct ArenaBlock* curr  = a;
@@ -300,7 +299,7 @@ void* ArenaPush(Arena* a, i32 s)
   assert(nextArenaBlock != NULL);
 
   curr->isFull = 1;
-  curr ->max_capacity = curr->ptr;
+  curr ->max_capacity = curr->ptr; // cap capacity to not exceed 
 
   curr->next = nextArenaBlock;
   nextArenaBlock->prev = curr;
@@ -444,12 +443,14 @@ void test_block_overflow() {
 
 int main(void)
 {
-Arena * a = ArenaConstruct();
-vector* v1 = ArenaPush(a, sizeof(vector));
+  Arena * a = ArenaConstruct();
+  assert(a != NULL);
+
+  vector* v1 = ArenaPush(a, sizeof(vector));
   v1->x = 2;
   v1->y = -8;
 
-  ArenaPop(a, 300);
+  //ArenaPop(a, 300);
   ArenaDestruct(a);
 
   test_block_overflow();
