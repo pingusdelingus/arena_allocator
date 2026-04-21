@@ -10,7 +10,7 @@ SOURCES = $(SRC_DIR)/Arena.c
 OBJECTS = $(SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 DEPS = $(OBJECTS:.o=.d)
 
-TARGET = arena.exe
+TARGET = arena.out
 
 .PHONY: clean all run
 

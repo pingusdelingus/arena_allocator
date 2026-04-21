@@ -1,8 +1,12 @@
 // @author: esteban morales
 
+
 #ifndef ARENA_HEADER
 
 #define ARENA_HEADER
+
+#include "types.h"
+
 
 typedef struct ArenaBlock {
   
@@ -18,7 +22,7 @@ typedef struct ArenaBlock {
 
 
 // constructor 
-ArenaBlock* AllocArenaBlock(void );
+ArenaBlock* AllocArenaBlock(size_t sizeFactor );
 
 // ~destructor
 void ReleaseArenaBlocks(ArenaBlock * a); 

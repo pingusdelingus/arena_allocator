@@ -4,7 +4,11 @@
 #include <assert.h>
 #include <sys/mman.h>
 
-static const i32 INITIAL_BLOCK_SIZE = 1000; // 1kb 
+static u32 CURRENT_BLOCK_SIZE = 1024; // 1kb 
+
+static u32 NUM_BYTES_LOST = 0;
+
+static u32 NUM_EXCESS_REQUEST = 0;
 
 static const i8 ALIGNMENT_BYTES = 16;
 
@@ -12,8 +16,9 @@ static const b8 USE_MMAP = 1;
 
 // ------------------------------------------------------------------------------
 
-ArenaBlock* AllocArenaBlock(void)
+ArenaBlock* AllocArenaBlock(size_t sizeFactor)
 {
+  size_t size = sizeFactor * CURRENT_BLOCK_SIZE;
   if (USE_MMAP){
     ArenaBlock* arena = (ArenaBlock* ) mmap(NULL, sizeof(ArenaBlock), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS ,-1,0 ); 
 
@@ -22,13 +27,13 @@ ArenaBlock* AllocArenaBlock(void)
       return NULL;
     }
 
-    arena-> buffer = (char* ) mmap (NULL, INITIAL_BLOCK_SIZE,  PROT_READ | PROT_WRITE,  MAP_PRIVATE | MAP_ANONYMOUS, -1 , 0); 
+    arena-> buffer = (char* ) mmap (NULL, size,  PROT_READ | PROT_WRITE,  MAP_PRIVATE | MAP_ANONYMOUS, -1 , 0); 
     
     if (arena->buffer == MAP_FAILED){
       perror("mmap failed on buffer");
 
       munmap(arena, sizeof(arena));
-// not needed      munmap(arena->buffer, INITIAL_BLOCK_SIZE);
+// not needed      munmap(arena->buffer, CURRENT_BLOCK_SIZE);
       return NULL;
     }
 
@@ -36,7 +41,7 @@ ArenaBlock* AllocArenaBlock(void)
   arena->isFull = 0;
   arena->next = NULL;
   arena->prev = NULL;
-  arena->max_capacity = INITIAL_BLOCK_SIZE; 
+  arena->max_capacity = size; 
   
   arena->ptr = 0; // point at first index !
     return arena;
@@ -49,7 +54,7 @@ ArenaBlock* AllocArenaBlock(void)
     return NULL;
   }
   
-  arena->buffer = (char*) malloc(INITIAL_BLOCK_SIZE);
+  arena->buffer = (char*) malloc(size);
   if (arena->buffer == NULL){
     free(arena);
     free(arena->buffer);
@@ -59,14 +64,17 @@ ArenaBlock* AllocArenaBlock(void)
   arena->isFull = 0;
   arena->next = NULL;
   arena->prev = NULL;
-  arena->max_capacity = INITIAL_BLOCK_SIZE; 
+  arena->max_capacity = size;
   
   arena->ptr = 0; // point at first index !
   memset(arena->buffer, 0, arena->max_capacity); 
 
   return arena; // will not get deleted after scope ends
+
   }// end of else
+
 }// end of AllocArenaBlock (constructor)
+
 
 // ------------------------------------------------------------------------------
 
@@ -79,7 +87,7 @@ void ReleaseArenaBlocks(ArenaBlock * a)
   while (curr != NULL){
       struct ArenaBlock* next = curr->next;
       
-      munmap(curr->buffer, sizeof(INITIAL_BLOCK_SIZE));
+      munmap(curr->buffer, sizeof(CURRENT_BLOCK_SIZE));
       munmap(curr, sizeof(curr));
       // iterate   
      curr = next;
@@ -243,14 +251,14 @@ Arena* ArenaConstruct(void)
       return NULL;
     }
 
-  a->genesis = AllocArenaBlock();
+  a->genesis = AllocArenaBlock(1);
   a->current = a->genesis;
   return a;  
 
   } else{
 
   Arena * a = (Arena*) malloc(sizeof(Arena));
-  a->genesis = AllocArenaBlock();
+  a->genesis = AllocArenaBlock(1);
   a->current = a->genesis;
   
   return a;
@@ -295,7 +303,13 @@ void* ArenaPush(Arena* a, i32 s)
 
   // full or requesting too much memory 
   // make new arena for next ptr
-  ArenaBlock* nextArenaBlock = AllocArenaBlock();
+  NUM_BYTES_LOST += curr->max_capacity - req_plus_used;
+  NUM_EXCESS_REQUEST += 1;
+  if (NUM_EXCESS_REQUEST >= 2 ) {
+    NUM_EXCESS_REQUEST = 0;
+    CURRENT_BLOCK_SIZE *= 2;
+  }
+  ArenaBlock* nextArenaBlock = AllocArenaBlock(2);
   assert(nextArenaBlock != NULL);
 
   curr->isFull = 1;
@@ -330,7 +344,17 @@ void* ArenaPushZeroes(Arena* a, i32 s)
 
   // full or requesting too much memory 
   // make new arena for next ptr
-  ArenaBlock* nextArenaBlock = AllocArenaBlock();
+
+  NUM_BYTES_LOST += curr->max_capacity - req_plus_used;
+  NUM_EXCESS_REQUEST += 1;
+  if (NUM_EXCESS_REQUEST >= 2 ) {
+    NUM_EXCESS_REQUEST = 0;
+    CURRENT_BLOCK_SIZE *= 2;
+  }
+
+
+
+  ArenaBlock* nextArenaBlock = AllocArenaBlock(2);
   assert(nextArenaBlock != NULL);
 
   curr->isFull = 1;
@@ -428,7 +452,7 @@ void test_block_overflow() {
     printf("Running: Block Overflow... ");
     Arena *a = ArenaConstruct();
     
-    // INITIAL_BLOCK_SIZE is 1000. Let's push 5000 bytes.
+    // CURRENT_BLOCK_SIZE is 1000. Let's push 5000 bytes.
     // This should create roughly 5-6 blocks depending on alignment.
     for(int i = 0; i < 50; i++) {
         ArenaPush(a, 100);

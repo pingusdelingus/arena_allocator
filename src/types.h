@@ -1,3 +1,7 @@
+#ifndef TYPES_HEADER
+
+#define TYPES_HEADER
+
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -27,3 +31,4 @@ typedef float f32;
 #define ALIGN_UP_POW2(n, p) (((u64)(n) + ((u64)(p) - 1)) & (~((u64)(p) - 1)))
 
 
+#endif
