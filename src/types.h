@@ -2,11 +2,11 @@
 
 #define TYPES_HEADER
 
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdbool.h>
 #include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 typedef int8_t i8;
 typedef int16_t i16;
@@ -21,6 +21,7 @@ typedef i8 b8;
 typedef i32 b32;
 
 typedef float f32;
+typedef double f64;
 
 #define KiB(n) ((u64)(n) << 10)
 #define MiB(n) ((u64)(n) << 20)
